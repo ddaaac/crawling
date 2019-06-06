@@ -6,28 +6,93 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-start_date = '2018-03-24'
-names = ['SK', 'NC', 'Hero', '두산', 'KT', 'KIA', 'LG', '삼성', '한화', '롯데']
+# names = ['SK', 'NC', 'Hero', '두산', 'KT', 'KIA', 'LG', '삼성', '한화', '롯데']
 
 # batter = pd.DataFrame()
 # pitcher = pd.DataFrame()
-batter = pd.read_csv('batter.csv', encoding='cp949')
-pitcher = pd.read_csv('pitcher.csv', encoding='cp949')
-error_date = []
+# batter = pd.read_csv('batter.csv', encoding='cp949')
+# pitcher = pd.read_csv('pitcher.csv', encoding='cp949')
+# error_date = []
+#
+#
+# def get_data_by_date(start_date, date):
+#     global batter, pitcher
+#     type = ['main', 'standard', 'advanced']
+#     position = ['pitcher/', '']
+#     for p in position:
+#         team = {}
+#         for name in names:
+#             team[name] = {'날짜': date}
+#         for t in type:
+#             url = "http://www.kbreport.com/teams/%s%s?teamId=&defense_no=&" \
+#             "year_from=%s&year_to=%s&split01=day&split02_1=%s&split02_2=%s" \
+#             % (p, t, start_date[:4], date[:4], start_date, date)
+#             # print(url)
+#             path = os.path.join("C:\\", "Users", "skybl", "Downloads", "chromedriver.exe")
+#             browser = webdriver.Chrome(path)
+#             browser.minimize_window()
+#             browser.get(url)
+#             try:
+#                 table = WebDriverWait(browser, 30).until(
+#                     EC.presence_of_element_located((By.CLASS_NAME, "ltb-table"))
+#                 )
+#
+#             finally:
+#                 # 첫 행은 columns의 이름으로 사용
+#                 first_row = table.find_element_by_tag_name("tr")
+#                 columns = str(first_row.text[2:]).split(' ')
+#                 # 다음 행부터는 데이터가 담겨있음
+#                 rows = table.find_elements_by_xpath("//tbody/tr")
+#                 for idx, row in enumerate(rows):
+#                     if idx == 0:
+#                         continue
+#                     elif idx > 10:
+#                         break
+#                     data = row.find_elements_by_xpath("td")[1:]
+#                     team_name = data[0].text
+#                     for index, d in enumerate(data):
+#                         team[team_name][columns[index]] = d.text
+#             if not table:
+#                 print("@@@@@@@@@@@@@@@@@@@@@@@@@@@ERROR@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
+#                 error_date.append(date)
+#             browser.quit()
+#         df = pitcher if p else batter
+#         for key in team:
+#             df = df.append(team[key], ignore_index=True)
+#         if p:
+#             pitcher = df
+#         else:
+#             batter = df
+#     print(date, " 끝")
+#
+#
+# def get_one_season():
+#     date = datetime.datetime(2018, 10, 15)
+#     while True:
+#         get_data_by_date('2018-03-24', date.strftime("%Y-%m-%d"))
+#         date += datetime.timedelta(days=1)
+#         if date == datetime.datetime(2018, 10, 14):
+#             break
+#         batter.to_csv('batter.csv', mode='w', encoding='cp949')
+#         pitcher.to_csv('pitcher.csv', mode='w', encoding='cp949')
+
+# get_one_season()
+# print("error date: ", error_date)
 
 
-def get_data_by_date(date):
-    global batter, pitcher
+def get_yearly_data(end_date='', year=''):
     type = ['main', 'standard', 'advanced']
     position = ['pitcher/', '']
+    pitcher = pd.DataFrame()
+    batter = pd.DataFrame()
     for p in position:
         team = {}
-        for name in names:
-            team[name] = {'날짜': date}
+        # for name in names:
+        #     team[name] = {'날짜': date}
         for t in type:
             url = "http://www.kbreport.com/teams/%s%s?teamId=&defense_no=&" \
-            "year_from=%s&year_to=%s&split01=day&split02_1=%s&split02_2=%s" \
-            % (p, t, start_date[:4], date[:4], start_date, date)
+                  "year_from=%s&year_to=%s&split01=day&split02_1=%s&split02_2=%s" \
+                  % (p, t, year, year, '', end_date)
             # print(url)
             path = os.path.join("C:\\", "Users", "skybl", "Downloads", "chromedriver.exe")
             browser = webdriver.Chrome(path)
@@ -47,36 +112,49 @@ def get_data_by_date(date):
                 for idx, row in enumerate(rows):
                     if idx == 0:
                         continue
-                    elif idx > 10:
-                        break
+                    # elif idx > len(team)+1:
+                    #     break
                     data = row.find_elements_by_xpath("td")[1:]
                     team_name = data[0].text
+                    if team_name == '전체':
+                        break
+                    if team_name not in team:
+                        team[team_name] = {}
                     for index, d in enumerate(data):
                         team[team_name][columns[index]] = d.text
             if not table:
                 print("@@@@@@@@@@@@@@@@@@@@@@@@@@@ERROR@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
-                error_date.append(date)
             browser.quit()
-        df = pitcher if p else batter
-        for key in team:
-            df = df.append(team[key], ignore_index=True)
         if p:
-            pitcher = df
+            for key in team:
+                pitcher = pitcher.append(team[key], ignore_index=True)
         else:
-            batter = df
-    print(date, " 끝")
+            for key in team:
+                batter = batter.append(team[key], ignore_index=True)
+    print("한 날짜 끝")
+    return [pitcher, batter]
 
 
-def get_one_season():
-    date = datetime.datetime(2018, 10, 15)
-    while True:
-        get_data_by_date(date.strftime("%Y-%m-%d"))
-        date += datetime.timedelta(days=1)
-        if date == datetime.datetime(2018, 10, 14):
-            break
-        batter.to_csv('batter.csv', mode='w', encoding='cp949')
-        pitcher.to_csv('pitcher.csv', mode='w', encoding='cp949')
+final_pitcher = pd.DataFrame()
+quarter_pitcher = pd.DataFrame()
+final_batter = pd.DataFrame()
+quarter_batter = pd.DataFrame()
+for year in range(2015, 2019):
+    [pitcher, batter] = get_yearly_data(year=str(year), end_date=str(year) + '-06-13')
+    print(pitcher)
+    print(batter)
+    quarter_pitcher = quarter_pitcher.append(pitcher)
+    quarter_batter = quarter_batter.append(batter)
+    [pitcher, batter] = get_yearly_data(year=str(year))
+    print(pitcher)
+    print(batter)
+    final_pitcher = final_pitcher.append(pitcher)
+    final_batter = final_batter.append(batter)
+    final_batter.to_csv('data/'+str(year)+'/final_batter.csv', encoding='cp949', mode='w')
+    quarter_pitcher.to_csv('data/'+str(year)+'/quarter_pitcher.csv', encoding='cp949', mode='w')
+    quarter_batter.to_csv('data/'+str(year)+'/quarter_batter.csv', encoding='cp949', mode='w')
+    final_pitcher.to_csv('data/'+str(year)+'/final_pitcher.csv', encoding='cp949', mode='w')
 
 
-get_one_season()
-print("error date: ", error_date)
+
+
